@@ -90,9 +90,6 @@ string ElideMiddle(const string& str, size_t width);
 /// Truncates a file to the given size.
 bool Truncate(const string& path, size_t size, string* err);
 
-/// Return true if \a input ends with \a needle.
-bool EndsWith(const string& input, const string& needle);
-
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #define fileno _fileno

@@ -604,9 +604,3 @@ bool Truncate(const string& path, size_t size, string* err) {
   }
   return true;
 }
-
-/// Return true if \a input ends with \a needle.
-bool EndsWith(const string& input, const string& needle) {
-  return (input.size() >= needle.size() &&
-    input.substr(input.size() - needle.size()) == needle);
-}

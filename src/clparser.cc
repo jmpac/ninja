@@ -28,6 +28,16 @@
 #include "util.h"
 #endif
 
+namespace {
+
+/// Return true if \a input ends with \a needle.
+bool EndsWith(const string& input, const string& needle) {
+  return (input.size() >= needle.size() &&
+          input.substr(input.size() - needle.size()) == needle);
+}
+
+}  // anonymous namespace
+
 // static
 string CLParser::FilterShowIncludes(const string& line,
                                     const string& deps_prefix) {

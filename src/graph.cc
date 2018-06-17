@@ -36,6 +36,11 @@ bool DependencyScan::RecomputeDirty(Node* node, string* err) {
   return RecomputeDirty(node, &stack, err);
 }
 
+static bool ShallowRule(string const& rule) {
+  // TODO: jeff: If these were passed in somehow (command line or ninja file), --shallow might come close to resembling a feature that is generally useful.
+  return rule == "link" || rule == "solink";
+}
+
 bool DependencyScan::RecomputeDirty(Node* node, vector<Node*>* stack,
                                     string* err) {
   Edge* edge = node->in_edge();
@@ -88,10 +93,9 @@ bool DependencyScan::RecomputeDirty(Node* node, vector<Node*>* stack,
   for (vector<Node*>::iterator i = edge->inputs_.begin();
        i != edge->inputs_.end(); ++i) {
 
-    if (shallow_ && EndsWith(node->path(), ".lib") && EndsWith((*i)->path(), ".lib")) {
+    if (shallow_ && ShallowRule(edge->rule().name()) && (*i)->in_edge() && ShallowRule((*i)->in_edge()->rule().name())) {
 
-      // --shallow => .lib inputs to .libs aren't dirty ipso facto. No need to go any deeper.
-      // TODO jeff: consider if using rule names instead of file extensions could make --shallow easier to understand/more generic.
+      // --shallow => allow one link rule, but if any of its inputs also require linking, assume they're not dirty.
       (*i)->set_dirty(false);
       if ((*i)->in_edge())
         (*i)->in_edge()->outputs_ready_ = true;
