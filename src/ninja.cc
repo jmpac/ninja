@@ -1038,9 +1038,10 @@ int ReadFlags(int* argc, char*** argv,
               Options* options, BuildConfig* config) {
   config->parallelism = GuessParallelism();
 
-  enum { OPT_VERSION = 1 };
+  enum { OPT_VERSION = 1, OPT_SHALLOW };
   const option kLongOptions[] = {
     { "help", no_argument, NULL, 'h' },
+    { "shallow", no_argument, NULL, OPT_SHALLOW },
     { "version", no_argument, NULL, OPT_VERSION },
     { NULL, 0, NULL, 0 }
   };
@@ -1104,8 +1105,11 @@ int ReadFlags(int* argc, char*** argv,
         options->working_dir = optarg;
         break;
       case OPT_VERSION:
-        printf("%s\n", kNinjaVersion);
+        printf("%s-modified\n", kNinjaVersion);
         return 0;
+      case OPT_SHALLOW:
+        config->shallow = true;
+        break;
       case 'h':
       default:
         Usage(*config);

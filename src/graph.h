@@ -249,10 +249,11 @@ struct ImplicitDepLoader {
 /// and updating the dirty/outputs_ready state of all the nodes and edges.
 struct DependencyScan {
   DependencyScan(State* state, BuildLog* build_log, DepsLog* deps_log,
-                 DiskInterface* disk_interface)
+                 DiskInterface* disk_interface, bool shallow)
       : build_log_(build_log),
         disk_interface_(disk_interface),
-        dep_loader_(state, deps_log, disk_interface) {}
+        dep_loader_(state, deps_log, disk_interface),
+        shallow_(shallow) {}
 
   /// Update the |dirty_| state of the given node by inspecting its input edge.
   /// Examine inputs, outputs, and command lines to judge whether an edge
@@ -289,6 +290,7 @@ struct DependencyScan {
   BuildLog* build_log_;
   DiskInterface* disk_interface_;
   ImplicitDepLoader dep_loader_;
+  bool shallow_;
 };
 
 #endif  // NINJA_GRAPH_H_

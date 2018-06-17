@@ -87,25 +87,36 @@ bool DependencyScan::RecomputeDirty(Node* node, vector<Node*>* stack,
   Node* most_recent_input = NULL;
   for (vector<Node*>::iterator i = edge->inputs_.begin();
        i != edge->inputs_.end(); ++i) {
-    // Visit this input.
-    if (!RecomputeDirty(*i, stack, err))
-      return false;
 
-    // If an input is not ready, neither are our outputs.
-    if (Edge* in_edge = (*i)->in_edge()) {
-      if (!in_edge->outputs_ready_)
-        edge->outputs_ready_ = false;
+    if (shallow_ && EndsWith(node->path(), ".lib") && EndsWith((*i)->path(), ".lib")) {
+
+      // --shallow => .lib inputs to .libs aren't dirty ipso facto. No need to go any deeper.
+      // TODO jeff: consider if using rule names instead of file extensions could make --shallow easier to understand/more generic.
+      (*i)->set_dirty(false);
+      if ((*i)->in_edge())
+        (*i)->in_edge()->outputs_ready_ = true;
     }
+    else {
+      // Visit this input.
+      if (!RecomputeDirty(*i, stack, err))
+        return false;
 
-    if (!edge->is_order_only(i - edge->inputs_.begin())) {
-      // If a regular input is dirty (or missing), we're dirty.
-      // Otherwise consider mtime.
-      if ((*i)->dirty()) {
-        EXPLAIN("%s is dirty", (*i)->path().c_str());
-        dirty = true;
-      } else {
-        if (!most_recent_input || (*i)->mtime() > most_recent_input->mtime()) {
-          most_recent_input = *i;
+      // If an input is not ready, neither are our outputs.
+      if (Edge* in_edge = (*i)->in_edge()) {
+        if (!in_edge->outputs_ready_)
+          edge->outputs_ready_ = false;
+      }
+
+      if (!edge->is_order_only(i - edge->inputs_.begin())) {
+        // If a regular input is dirty (or missing), we're dirty.
+        // Otherwise consider mtime.
+        if ((*i)->dirty()) {
+          EXPLAIN("%s is dirty", (*i)->path().c_str());
+          dirty = true;
+        } else {
+          if (!most_recent_input || (*i)->mtime() > most_recent_input->mtime()) {
+            most_recent_input = *i;
+          }
         }
       }
     }
