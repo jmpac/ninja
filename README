@@ -1,3 +1,15 @@
+Ninja, inelegantly modified to conform to a particular workflow on a
+particular project. It adds:
+
+--shallow command line option, which executes only the top-most
+rule named "link" or "solink". Any inputs to that rule that require 
+a link to rebuild are treated as though they're already up-to-date.
+
+*target syntax for specifying targets, which selects all targets that
+are inputs to the default target and contain the substring "target".
+
+Original README follows.
+
 Ninja is a small build system with a focus on speed.
 https://ninja-build.org/
 
