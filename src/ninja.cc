@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cassert>
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -104,11 +105,15 @@ struct NinjaMain : public BuildLogUser {
 
   /// Get the Node for a given command-line path, handling features like
   /// spell correction.
-  Node* CollectTarget(const char* cpath, string* err);
+  vector<Node*> CollectTargets(const char* cpath, string* err);
 
   /// CollectTarget for all command-line arguments, filling in \a targets.
   bool CollectTargetsFromArgs(int argc, char* argv[],
                               vector<Node*>* targets, string* err);
+
+  /// Handles the case where the target's path starts with '*'
+  /// "*foo" means "any target that is a direct input of a default target and contains the substring foo".
+  vector<Node*> MatchTargets(string const& path, string* err);
 
   // The various subcommands, run via "-t XXX".
   int ToolGraph(const Options* options, int argc, char* argv[]);
@@ -265,11 +270,11 @@ bool NinjaMain::RebuildManifest(const char* input_file, string* err) {
   return true;
 }
 
-Node* NinjaMain::CollectTarget(const char* cpath, string* err) {
+vector<Node*> NinjaMain::CollectTargets(const char* cpath, string* err) {
   string path = cpath;
   uint64_t slash_bits;
   if (!CanonicalizePath(&path, &slash_bits, err))
-    return NULL;
+    return {};
 
   // Special syntax: "foo.cc^" means "the first output of foo.cc".
   bool first_dependent = false;
@@ -278,12 +283,17 @@ Node* NinjaMain::CollectTarget(const char* cpath, string* err) {
     first_dependent = true;
   }
 
+  // Special syntax: "*foo" means "any target that is a direct input of a default target and contains the substring foo".
+  vector<Node*> targets;
+  if (!path.empty() && path[0] == '*')
+    return MatchTargets(path, err);
+
   Node* node = state_.LookupNode(path);
   if (node) {
     if (first_dependent) {
       if (node->out_edges().empty()) {
         *err = "'" + path + "' has no out edge";
-        return NULL;
+        return {};
       }
       Edge* edge = node->out_edges()[0];
       if (edge->outputs_.empty()) {
@@ -292,7 +302,7 @@ Node* NinjaMain::CollectTarget(const char* cpath, string* err) {
       }
       node = edge->outputs_[0];
     }
-    return node;
+    return {node};
   } else {
     *err =
         "unknown target '" + Node::PathDecanonicalized(path, slash_bits) + "'";
@@ -306,7 +316,7 @@ Node* NinjaMain::CollectTarget(const char* cpath, string* err) {
         *err += ", did you mean '" + suggestion->path() + "'?";
       }
     }
-    return NULL;
+    return {};
   }
 }
 
@@ -318,12 +328,36 @@ bool NinjaMain::CollectTargetsFromArgs(int argc, char* argv[],
   }
 
   for (int i = 0; i < argc; ++i) {
-    Node* node = CollectTarget(argv[i], err);
-    if (node == NULL)
+    vector<Node*> nodes = CollectTargets(argv[i], err);
+    if (nodes.empty())
       return false;
-    targets->push_back(node);
+    targets->insert(targets->end(), nodes.begin(), nodes.end());
   }
   return true;
+}
+
+vector<Node*> NinjaMain::MatchTargets(string const& path, string* err)
+{
+  assert(!path.empty() && path[0] == '*');
+  std::vector<Node*> defaults = state_.DefaultNodes(err);
+  if (defaults.empty())
+    return {};
+
+  vector<Node*> targets;
+  for (Node* defNode : state_.DefaultNodes(err)) {
+    if (Edge* inEdge = defNode->in_edge()) {
+      for (Node* input : inEdge->inputs_) {
+        if (input->path().find(path.substr(1)) != string::npos) {
+          targets.push_back(input);
+        }
+      }
+    }
+  }
+
+  if (targets.empty())
+    *err = "could not find any target that matches " + path;
+
+  return targets;
 }
 
 int NinjaMain::ToolGraph(const Options* options, int argc, char* argv[]) {
@@ -351,11 +385,16 @@ int NinjaMain::ToolQuery(const Options* options, int argc, char* argv[]) {
 
   for (int i = 0; i < argc; ++i) {
     string err;
-    Node* node = CollectTarget(argv[i], &err);
-    if (!node) {
+    vector<Node*> nodes = CollectTargets(argv[i], &err);
+    if (nodes.empty()) {
       Error("%s", err.c_str());
       return 1;
     }
+    if (nodes.size() > 1) {
+      Error("%s matched more than one target. Not currently supported for tool query. Maybe when I figure out what a tool query is, I'll implement it.", argv[i]);
+      return 1;
+    }
+    Node* node = nodes[0];
 
     printf("%s:\n", node->path().c_str());
     if (Edge* edge = node->in_edge()) {
