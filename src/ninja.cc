@@ -1077,9 +1077,10 @@ int ReadFlags(int* argc, char*** argv,
               Options* options, BuildConfig* config) {
   config->parallelism = GuessParallelism();
 
-  enum { OPT_VERSION = 1, OPT_SHALLOW };
+  enum { OPT_VERSION = 1, OPT_MISSING_OBJ_OK, OPT_SHALLOW };
   const option kLongOptions[] = {
     { "help", no_argument, NULL, 'h' },
+    { "missing-obj-ok", no_argument, NULL, OPT_MISSING_OBJ_OK },
     { "shallow", no_argument, NULL, OPT_SHALLOW },
     { "version", no_argument, NULL, OPT_VERSION },
     { NULL, 0, NULL, 0 }
@@ -1143,12 +1144,15 @@ int ReadFlags(int* argc, char*** argv,
       case 'C':
         options->working_dir = optarg;
         break;
-      case OPT_VERSION:
-        printf("%s-modified\n", kNinjaVersion);
-        return 0;
+      case OPT_MISSING_OBJ_OK:
+        config->missingObjOk = true;
+        break;
       case OPT_SHALLOW:
         config->shallow = true;
         break;
+      case OPT_VERSION:
+        printf("%s-modified\n", kNinjaVersion);
+        return 0;
       case 'h':
       default:
         Usage(*config);

@@ -139,6 +139,7 @@ struct BuildConfig {
   /// The maximum load average we must not exceed. A negative value
   /// means that we do not have any limit.
   double max_load_average;
+  bool missingObjOk = false;
   bool shallow = false;
 };
 

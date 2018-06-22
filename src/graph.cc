@@ -31,14 +31,18 @@ bool Node::Stat(DiskInterface* disk_interface, string* err) {
   return (mtime_ = disk_interface->Stat(path_, err)) != -1;
 }
 
-bool DependencyScan::RecomputeDirty(Node* node, string* err) {
-  vector<Node*> stack;
-  return RecomputeDirty(node, &stack, err);
-}
-
 static bool ShallowRule(string const& rule) {
   // TODO: jeff: If these were passed in somehow (command line or ninja file), --shallow might come close to resembling a feature that is generally useful.
   return rule == "link" || rule == "solink";
+}
+
+static bool IsObj(string const& path) {
+  return EndsWith(path, ".obj") || EndsWith(path, ".o");
+}
+
+bool DependencyScan::RecomputeDirty(Node* node, string* err) {
+  vector<Node*> stack;
+  return RecomputeDirty(node, &stack, err);
 }
 
 bool DependencyScan::RecomputeDirty(Node* node, vector<Node*>* stack,
@@ -132,6 +136,18 @@ bool DependencyScan::RecomputeDirty(Node* node, vector<Node*>* stack,
     if (!RecomputeOutputsDirty(edge, most_recent_input, &dirty, err))
       return false;
 
+  if (dirty && missingObjOk_) {
+    // We're dirty, which means we need all object files to link.
+    // If we've skipped any because they weren't there, mark them dirty.
+    for (Node* in : edge->inputs_) {
+      if (!in->exists() && IsObj(in->path())) {
+        in->set_dirty(true);
+        if (in->in_edge())
+          in->in_edge()->outputs_ready_ = false;
+      }
+    }
+  }
+
   // Finally, visit each output and update their dirty state if necessary.
   for (vector<Node*>::iterator o = edge->outputs_.begin();
        o != edge->outputs_.end(); ++o) {
@@ -224,16 +240,32 @@ bool DependencyScan::RecomputeOutputDirty(Edge* edge,
   }
 
   BuildLog::LogEntry* entry = 0;
+  TimeStamp output_mtime = output->mtime();
 
   // Dirty if we're missing the output.
   if (!output->exists()) {
-    EXPLAIN("output %s doesn't exist", output->path().c_str());
-    return true;
+    if (missingObjOk_ && IsObj(output->path())) {
+      // No object file, but missingObjOk_ is on.
+      // Still need to check if one of its inputs is newer, but since the
+      // object file doesn't exist, we the time of one of its outputs instead.
+      // TODO jeff: should probably check all outputs here, but seems weird
+      // to reach so far back up the graph. There must be a better way.
+      // Just get it working for now.
+      if (output->out_edges().empty() || output->out_edges()[0]->outputs_.empty())
+        return true; // No output to compare -> must assume dirty.
+      Node* n = output->out_edges()[0]->outputs_[0];
+      if (!n->exists())
+        return true; // output not there, we'll need to rebuild this obj anyway, so whatever.
+      output_mtime = n->mtime();
+    }
+    else {
+      EXPLAIN("output %s doesn't exist", output->path().c_str());
+      return true;
+    }
   }
 
   // Dirty if the output is older than the input.
-  if (most_recent_input && output->mtime() < most_recent_input->mtime()) {
-    TimeStamp output_mtime = output->mtime();
+  if (most_recent_input && output_mtime < most_recent_input->mtime()) {
 
     // If this is a restat rule, we may have cleaned the output with a restat
     // rule in a previous run and stored the most recent input mtime in the
