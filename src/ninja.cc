@@ -204,6 +204,8 @@ void Usage(const BuildConfig& config) {
 "usage: ninja [options] [targets...]\n"
 "\n"
 "if targets are unspecified, builds the 'default' target (see manual).\n"
+"*targ will build all children of the default targets that contain the\n"
+"substring 'targ' (case-insensitive).\n"
 "\n"
 "options:\n"
 "  --version  print ninja version (\"%s\")\n"
@@ -216,12 +218,16 @@ void Usage(const BuildConfig& config) {
 "  -l N     do not start new jobs if the load average is greater than N\n"
 "  -n       dry run (don't run commands but act like they succeeded)\n"
 "  -v       show all command lines while building\n"
+"  -V multiline       don't erase old lines of output\n"
 "\n"
 "  -d MODE  enable debugging (use -d list to list modes)\n"
 "  -t TOOL  run a subtool (use -t list to list subtools)\n"
 "    terminates toplevel options; further flags are passed to the tool\n"
-"  -w FLAG  adjust warnings (use -w list to list warnings)\n",
-          kNinjaVersion, config.parallelism);
+"  -w FLAG  adjust warnings (use -w list to list warnings)\n"
+"\n"
+"  --shallow          only do the top-most link rule; don't link its inputs\n"
+"  --missing-obj-ok   a missing object file is no reason to build it\n",
+kNinjaVersion, config.parallelism);
 }
 
 /// Choose a default value for the -j (parallelism) flag.
