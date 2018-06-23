@@ -93,6 +93,9 @@ bool Truncate(const string& path, size_t size, string* err);
 /// Return true if \a input ends with \a needle.
 bool EndsWith(const string& input, const string& needle);
 
+/// Like str.find(needle), but case in-sensitive, and returns a bool, not an iterator.
+bool Findi(string const& str, string const& needle);
+
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #define fileno _fileno

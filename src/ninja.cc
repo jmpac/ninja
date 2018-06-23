@@ -347,7 +347,7 @@ vector<Node*> NinjaMain::MatchTargets(string const& path, string* err)
   for (Node* defNode : state_.DefaultNodes(err)) {
     if (Edge* inEdge = defNode->in_edge()) {
       for (Node* input : inEdge->inputs_) {
-        if (input->path().find(path.substr(1)) != string::npos) {
+        if (Findi(input->path(), path.substr(1))) {
           targets.push_back(input);
         }
       }

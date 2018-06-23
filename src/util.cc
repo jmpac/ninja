@@ -38,6 +38,7 @@
 #include <sys/time.h>
 #endif
 
+#include <algorithm>
 #include <vector>
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -608,4 +609,12 @@ bool Truncate(const string& path, size_t size, string* err) {
 bool EndsWith(const string& input, const string& needle) {
   return (input.size() >= needle.size() &&
     input.substr(input.size() - needle.size()) == needle);
+}
+
+bool Findi(string const& str, string const& needle)
+{
+  auto it = search(str.begin(), str.end(), needle.begin(), needle.end(),
+    [](char a, char b) { return toupper(a) == toupper(b); }
+  );
+  return it != str.end();
 }
