@@ -1088,7 +1088,7 @@ int ReadFlags(int* argc, char*** argv,
 
   int opt;
   while (!options->tool &&
-         (opt = getopt_long(*argc, *argv, "d:f:j:k:l:nt:vw:C:h", kLongOptions,
+         (opt = getopt_long(*argc, *argv, "d:f:j:k:l:nt:vV:w:C:h", kLongOptions,
                             NULL)) != -1) {
     switch (opt) {
       case 'd':
@@ -1136,6 +1136,12 @@ int ReadFlags(int* argc, char*** argv,
         break;
       case 'v':
         config->verbosity = BuildConfig::VERBOSE;
+        break;
+      case 'V':
+        if (optarg && strcmp(optarg, "multiline") == 0)
+          config->verbosity = BuildConfig::NORMAL_MULTILINE;
+        else
+          config->verbosity = BuildConfig::VERBOSE;
         break;
       case 'w':
         if (!WarningEnable(optarg, options))

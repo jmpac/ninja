@@ -130,7 +130,8 @@ struct BuildConfig {
   enum Verbosity {
     NORMAL,
     QUIET,  // No output -- used when testing.
-    VERBOSE
+    VERBOSE,
+    NORMAL_MULTILINE, // Normal, but don't erase old lines (smart_terminal_ == false)
   };
   Verbosity verbosity;
   bool dry_run;
